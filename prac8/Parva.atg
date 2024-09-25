@@ -142,6 +142,8 @@ PRODUCTIONS
             | ReturnStatement
             | ReadStatement
             | WriteStatement
+            | BreakStatement // task 8
+            | ContinueStatement // task 8
 			| DoWhileStatement<frame>
 			| RepeatStatement<frame>
             | ";"					(. if (warnings) Warning("empty statement"); .)
@@ -251,6 +253,25 @@ PRODUCTIONS
   =  "if" "(" Condition ")"                  (. CodeGen.branchFalse(falseLabel); .)
        Statement<frame>                      (. falseLabel.here(); .)
   .
+//-----------------------------------------------------------------------------------------------------------------------------------------------
+//Task8 start
+
+//Task is to add Continue() & Break() statements to all loops
+//Continue: skips to the next itteration if encountered
+//Break: Terminates the loop
+//Both should have their own PRODUCTIONS as they appear in statement
+
+//break: If in loop should jump to loop exit
+  BreakStatement
+  = "break" WEAK ";"                         (. if(loopExit == null) SemError("break not inside loop"); 
+                                                CodeGen.branch(loopExit); .)
+  .
+
+//Continue: If in loop should jump to loop start 
+  ContinueStatement 
+  = "continue" WEAK ";"                      (. if(loopStart==null) SemError("continue not inside loop"); 
+                                                CodeGen.branch(loopStart); .)
+  .
 
   WhileStatement<StackFrame frame>           (. Label loopExit  = new Label(!known);
                                                 Label loopStart = new Label(known); .)
@@ -258,22 +279,33 @@ PRODUCTIONS
      Statement<frame>                        (. CodeGen.branch(loopStart);
                                                 loopExit.here(); .)
   .
-
+//Added code gen and labels to repeat loop
    RepeatStatement<StackFrame frame>  	
-    =  "repeat" {
-         Statement<frame>
-       }
+    =  "repeat"                           (. Label loopExit = new Label(!known);
+                                                Label loopStart = new Label(known); 
+                                                loopStart.here(); .)
+        {Statement<frame>}
+       
        WEAK "until"
-       "(" Condition ")" WEAK ";"     .
+       "(" Condition ")" WEAK ";"            (. CodeGen.branchFalse(loopExit);
+                                                loopExit.here(); .)
+       .     
 
-
+//Added code gen and labels to do while loop 
   DoWhileStatement<StackFrame frame>  
-  =  "do"    
-       Statement<frame>  
-       WEAK "while"
-     "(" Condition ")" WEAK ";"       .
+  =  "do"                                    (. Label loopExit = new Label(!known);
+                                                Label loopStart = new Label(known); .)
+                                                
+       Statement<frame>                      (. loopStart.here(); .)
+       WEAK "while"                           
+     "(" Condition ")"                       (.CodeGen.branchFalse(loopExit);
+                                               CodeGen.branch(loopStart);
+                                               loopExit.here(); .)
+       WEAK ";"      
+      .
 
- 
+// Task 8 end
+//----------------------------------------------------------------------------------------------------------------------------------------------
   HaltStatement                              /* optional arguments! */
   = "halt" [ "(" [ WriteList ] ")" ]
     WEAK ";"                                 (. CodeGen.leaveProgram(); .)
