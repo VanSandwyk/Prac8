@@ -475,16 +475,23 @@ public class Parser {
 	}
 
 	static void DoWhileStatement(StackFrame frame) {
+		Label loopExit = new Label(!known);
 		Expect(do_Sym);
+		Label loopStart = new Label(known);
 		Statement(frame);
 		ExpectWeak(while_Sym, 8);
 		Expect(lparen_Sym);
 		Condition();
 		Expect(rparen_Sym);
 		ExpectWeak(semicolon_Sym, 4);
+		CodeGen.branchFalse(loopExit);
+		CodeGen.branch(loopStart);
+		loopExit.here();
 	}
 
 	static void RepeatStatement(StackFrame frame) {
+		Label loopExit = new Label(!known);
+		 Label loopStart = new Label(known);
 		Expect(repeat_Sym);
 		while (StartOf(2)) {
 			Statement(frame);
@@ -494,6 +501,8 @@ public class Parser {
 		Condition();
 		Expect(rparen_Sym);
 		ExpectWeak(semicolon_Sym, 4);
+		CodeGen.branchFalse(loopStart); ;
+		loopExit.here();
 	}
 
 	static void OneConst() {
@@ -946,9 +955,10 @@ public class Parser {
 			Expect(lparen_Sym);
 			type = Expression();
 			if (!isArith(type))
-			SemError("Arithmetic argument needed");
-			type = Types.intType;
+			    SemError("Arithmetic argument needed");
+			    type = Types.intType;
 			Expect(rparen_Sym);
+			CodeGen.squareInteger();
 			break;
 		}
 		case sqrt_Sym: {
@@ -959,6 +969,7 @@ public class Parser {
 			SemError("Arithmetic argument needed");
 			type = Types.intType;
 			Expect(rparen_Sym);
+			CodeGen.squareRootInteger();
 			break;
 		}
 		case lparen_Sym: {

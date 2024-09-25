@@ -259,19 +259,24 @@ PRODUCTIONS
                                                 loopExit.here(); .)
   .
 
-   RepeatStatement<StackFrame frame>  	
-    =  "repeat" {
+   RepeatStatement<StackFrame frame>  	     (. Label loopExit = new Label(!known);
+                                                Label loopStart = new Label(known); .)
+    =  "repeat" {                            
          Statement<frame>
        }
        WEAK "until"
-       "(" Condition ")" WEAK ";"     .
+       "(" Condition ")" WEAK ";"            (. CodeGen.branchFalse(loopStart); ;
+                                                loopExit.here(); .)
+        .
 
-
-  DoWhileStatement<StackFrame frame>  
-  =  "do"    
-       Statement<frame>  
+  DoWhileStatement<StackFrame frame>         (. Label loopExit = new Label(!known); .)
+  =  "do"                                    (. Label loopStart = new Label(known); .)
+       Statement<frame>                      
        WEAK "while"
-     "(" Condition ")" WEAK ";"       .
+     "(" Condition ")" WEAK ";"              (. CodeGen.branchFalse(loopExit); .)
+                                             (. CodeGen.branch(loopStart); 
+                                                loopExit.here(); .)
+      .
 
  
   HaltStatement                              /* optional arguments! */
@@ -456,14 +461,15 @@ PRODUCTIONS
        )                                     (. CodeGen.allocate(); .)
 	 | "sqr"
 		"(" Expression<out type>    	(. if (!isArith(type))
-											SemError("Arithmetic argument needed");
-											type = Types.intType; .)
-		")"
+                                      SemError("Arithmetic argument needed");
+                                      type = Types.intType; .)
+                                  
+		")"                           (. CodeGen.squareInteger(); .)
 	 | "sqrt"
 		"(" Expression<out type>    	(. if (!isArith(type))
-												SemError("Arithmetic argument needed");
-											type = Types.intType; .)
-		")"
+												            SemError("Arithmetic argument needed");
+											              type = Types.intType; .)
+		")"                           (. CodeGen.squareRootInteger(); .)
 
      | "(" Expression<out type> ")"
   .
